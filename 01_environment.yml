@@ -1,0 +1,7 @@
+paths:
+  data: "/project/rrg-shreejoy/tdelong/MRI_RNA_Data"
+  scratch: "/scratch/tdelong/MRI_RNA_Scratch"
+  code: "/home/tdelong/MRI_RNA_Code"
+
+# system:
+#   cores: 192 #how many cores per node on your cluster
