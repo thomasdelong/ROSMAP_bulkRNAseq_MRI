@@ -20,5 +20,10 @@ slurm_script = f"""#!/bin/bash
 #SBATCH --cpus-per-task=1
 #SBATCH --time=04:00:00
 
+source /scratch/tdelong/miniforge3/etc/profile.d/conda.sh
 
+Rscript {code_path}/07_demographics_globalfeatures.R
 """
+
+with open(script_dir, "w") as file:
+    file.write(slurm_script)

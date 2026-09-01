@@ -1,5 +1,7 @@
 #ENVIRONMENT
 01_environment.yml needs to be edited with paths to your code, data, and scratch folders (described below)
+NEED TO FIX CONDA ENVIRONMENT ISSUES: MAKE 01b TO GENERATE ENV FROM YML, THEN DYNAMICALLY USE THAT IN SLURM
+JOBS LIKE 07b
 
 #DATA
 MRI_RNA_Code should be in your working directory. Make sure to cd into this directory and activate

@@ -33,15 +33,25 @@ for root, dirs, files in os.walk(data_dir):
 failed_files = []
 completed = 0
 
-# for mri_file in mri_files:
-#     path_parts = os.path.dirname(mri_file).split("/")
-#     subject_id = path_parts[-3]
-#     session_id = path_parts[-2]
-#     session_output_dir = os.path.join(output_file_dir, subject_id, session_id, "output")
-#     os.makedirs(session_output_dir, exist_ok=True)
-#     subject_dir = os.path.join(session_output_dir, subject_id)
-#     slurm_script += f'\nrm -rf {subject_dir} && recon-all -i {mri_file} -sd {session_output_dir} -subjid {subject_id} -all -clean &'
-#     failed_files.append(mri_file)
+for mri_file in mri_files:
+    path_parts = os.path.dirname(mri_file).split("/")
+    subject_id = path_parts[-3]
+    session_id = path_parts[-2]
+    session_output_dir = os.path.join(output_file_dir, subject_id, session_id, "output")
+
+    done_marker = os.path.join(session_output_dir, subject_id, "scripts", "recon-all.done")
+    log_file = os.path.join(session_output_dir, subject_id, "scripts", "recon-all.log")
+
+    finished_ok = False
+    if os.path.exists(done_marker) and os.path.exists(log_file):
+        with open(log_file, "r") as f:
+            log_content = f.read()
+        finished_ok = "finished without error" in log_content
+
+    if finished_ok:
+        completed += 1
+    else:
+        failed_files.append(mri_file)
 
 print(f"Completed: {completed} / {len(mri_files)}")
 print(f"Needs rerun: {len(failed_files)}")

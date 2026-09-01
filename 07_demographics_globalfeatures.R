@@ -3,6 +3,9 @@ library(variancePartition)
 library(limma)
 library(here)
 library(yaml)
+library(gprofiler2)
+library(ggrepel)
+library(eulerr)
 #library(ComplexUpset)
 #library(ComplexHeatmap)
 
@@ -120,21 +123,115 @@ p <- ggplot(cogdx, aes(x = '', y = count, fill = group)) +
   coord_polar(theta = "y", start=0) +
   theme_minimal()+
   scale_fill_manual(values = c('#D93911','#011638','#FFBD23')) #ad, control, mci
-p
+
 ggsave(file=paste0(scratch_path,"/figures/main/07_diagnosis.svg"), plot=p, width=4, height=4, device = svg)
 
-rownames(combined_data) <- NULL
-data <- combined_data[,c('CortexVol_norm', 'tissue', 'projid', 'age_diff', 'age_death', 'master_brain_side', 'msex', 'specimenID')] %>%
-      column_to_rownames('specimenID') %>%
-      filter(tissue == 'dorsolateral prefrontal cortex')
-data$tissue <- gsub(" ", "", data$tissue)
-#define seperately, model.matrix has issues with the random effect
-formula <- as.formula(paste0("~ CortexVol_norm + age_diff + age_death + master_brain_side + msex"))
-# Fit the linear model using limma
-fit <- dream(rnaseq_subset_filtered, formula, data)
-fit <- eBayes(fit)
-print('CortexVol_norm term, no interaction')
-CortexVol_norm <- topTable(fit, coef = 'CortexVol_norm', number = Inf)
+# # RUN DREAM FOR VOLUME, THICKNESS, AD
+# rownames(combined_data) <- NULL
+# # Volume
+# data <- combined_data[,c('CortexVol_norm', 'tissue', 'projid', 'age_diff', 'age_death', 'master_brain_side', 'msex', 'specimenID')] %>%
+#       column_to_rownames('specimenID') %>%
+#       filter(tissue == 'dorsolateral prefrontal cortex')
+# data$tissue <- gsub(" ", "", data$tissue)
+# rnaseq_dlpfc <- rnaseq_subset_filtered[, rownames(data)]
+# #define seperately, model.matrix has issues with the random effect
+# formula <- as.formula(paste0("~ CortexVol_norm + age_diff + age_death + master_brain_side + msex"))
+# # Fit the linear model using limma
+# fit <- dream(rnaseq_dlpfc, formula, data)
+# fit <- eBayes(fit)
+# print('CortexVol_norm term, no interaction')
+# tt_volume <- topTable(fit, coef = 'CortexVol_norm', number = Inf)
+# write.csv(tt_volume, paste0(scratch_path, "/processed_data/toptables/CortexVol_norm.csv"))
 
-write.csv(CortexVol_norm, paste0(scratch_path, "/processed_data/toptables/CortexVol_norm.csv"))
-#save(fit, file = "/scratch/tdelong/limma_output/interaction/wholebrain/CortexVol_normfit.RData")
+# # Thickness 
+# data <- combined_data[,c('MeanThickness', 'tissue', 'projid', 'age_diff', 'age_death', 'master_brain_side', 'msex', 'specimenID')] %>%
+#   column_to_rownames('specimenID') %>%
+#   filter(tissue == 'dorsolateral prefrontal cortex')
+# data$tissue <- gsub(" ", "", data$tissue)
+
+# formula <- as.formula("~ MeanThickness + age_diff + age_death + master_brain_side + msex")
+# fit <- dream(rnaseq_dlpfc, formula, data)
+# fit <- eBayes(fit)
+
+# tt_thickness <- topTable(fit, coef = 'MeanThickness', number = Inf)
+# write.csv(tt_thickness, paste0(scratch_path, "/processed_data/toptables/MeanThickness.csv"))
+
+# #AD
+# data <- combined_data[,c('cogdx', 'tissue', 'projid', 'age_diff', 'age_death', 'master_brain_side', 'msex', 'specimenID')] %>%
+#   column_to_rownames('specimenID') %>%
+#   filter(tissue == 'dorsolateral prefrontal cortex')
+# data$tissue <- gsub(" ", "", data$tissue)
+# data$cogdx <- factor(data$cogdx, levels = c(1, 2, 4))
+
+# formula_cogdx <- as.formula("~ cogdx + age_diff + age_death + master_brain_side + msex")
+# fit_cogdx <- dream(rnaseq_dlpfc, formula_cogdx, data)
+# fit_cogdx <- eBayes(fit_cogdx)
+
+# toptable_AD <- topTable(fit_cogdx, coef = 'cogdx4', number = Inf)
+# write.csv(toptable_AD, paste0(scratch_path, "/processed_data/toptables/AD.csv"))
+
+
+# volume_gene <- "FUZ" 
+# gene_lookup <- gconvert(volume_gene, organism = "hsapiens", target = "ENSG")
+# gene_id <- gene_lookup$target[1]
+# toptable_volume_labeled <- toptable_volume %>%
+#   rownames_to_column('input') %>%
+#   mutate(label = ifelse(input == gene_id, volume_gene, NA))
+
+# p <- ggplot(toptable_volume_labeled, aes(x = logFC, y = -log10(P.Value), color = BH_1)) +
+#   geom_point() +
+#   ggtitle("") +
+#   labs(color = 'pFDR < 0.1') +
+#   scale_color_manual(values = c('gray', '#1683A6')) +
+#   ylim(0, 8) +
+#   theme_bw() +
+#   theme(panel.grid.major = element_blank(),
+#         panel.grid.minor = element_blank(),
+#         panel.border = element_blank(),
+#         text = element_text(family = "roboto", size = 12)) +
+#   geom_text_repel(aes(label = label), show.legend = FALSE, box.padding = 0.75,
+#                    max.overlaps = Inf, na.rm = TRUE) +
+#   ggtitle('Volume')
+# p
+
+# ggsave(file = paste0(scratch_path, '/figures/main/07_volume_volcano.svg'), plot = p, width = 4, height = 4, device = svg)
+
+# thickness_gene <- "HES5" 
+# gene_lookup <- gconvert(thickness_gene, organism = "hsapiens", target = "ENSG")
+# gene_id <- gene_lookup$target[1]
+# toptable_thickness_labeled <- toptable_thickness %>%
+#   rownames_to_column('input') %>%
+#   mutate(label = ifelse(input == gene_id, thickness_gene, NA))
+
+# p <- ggplot(toptable_thickness_labeled, aes(x = logFC, y = -log10(P.Value), color = BH_1)) +
+#   geom_point() +
+#   ggtitle("") +
+#   labs(color = 'pFDR < 0.1') +
+#   scale_color_manual(values = c('gray', '#2D6E2E')) +
+#   ylim(0, 8) +
+#   theme_bw() +
+#   theme(panel.grid.major = element_blank(),
+#         panel.grid.minor = element_blank(),
+#         panel.border = element_blank(),
+#         text = element_text(family = "roboto", size = 12)) +
+#   geom_text_repel(aes(label = label), show.legend = FALSE, box.padding = 0.75,
+#                    max.overlaps = Inf, na.rm = TRUE) +
+#   ggtitle('Global Cortical Thickness')
+# p
+
+# ggsave(file = paste0(scratch_path, '/figures/main/07_thickness_volcano.svg'), plot = p, width = 4, height = 4, device = svg)
+data_all_tissue <- combined_data %>%
+  dplyr::select(CortexVol_norm, tissue, projid, age_diff, age_death, master_brain_side, msex, specimenID) %>%
+  column_to_rownames('specimenID')
+data_all_tissue$tissue <- factor(gsub(" ", "", data_all_tissue$tissue))
+
+# rnaseq_subset_filtered was already built from all tissues earlier in the script -
+# just reuse it directly instead of re-subsetting to DLPFC
+rnaseq_all_tissue <- rnaseq_subset_filtered[, rownames(data_all_tissue)]
+formula_mixed <- as.formula("~ CortexVol_norm + age_diff + age_death + master_brain_side + msex + tissue + (1|projid)")
+
+fit <- dream(rnaseq_all_tissue, formula_mixed, data_all_tissue)
+fit <- eBayes(fit)
+
+CortexVol_norm_alltissue <- topTable(fit, coef = 'CortexVol_norm', number = Inf)
+write.csv(CortexVol_norm_alltissue, paste0(scratch_path, "/processed_data/toptables/CortexVol_norm_alltissue.csv"))
