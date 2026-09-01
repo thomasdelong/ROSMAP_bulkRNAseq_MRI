@@ -45,8 +45,8 @@ for i in range(chunks):
 #SBATCH --job-name=dkt_regional_{chunk_id}
 #SBATCH --array=1-{len(chunk_jobs)}
 #SBATCH --time=04:00:00
-#SBATCH --output={logs_dir}/dkt_dream_{chunk_id}_%a.out
-#SBATCH --error={logs_dir}/dkt_dream_{chunk_id}_%a.err
+#SBATCH --output={logs_dir}/dkt_dream_{chunk_id}_%a_jobID_%j.out
+#SBATCH --error={logs_dir}/dkt_dream_{chunk_id}_%a_jobID_%j.err
 #SBATCH --ntasks={tasks_per_job}
 #SBATCH --nodes=1
 
@@ -57,7 +57,7 @@ REGION=$(echo "$LINE" | cut -f2)
 
 source /scratch/tdelong/miniforge3/etc/profile.d/conda.sh
 
-Rscript 08_dkt_region_dream.R "$TISSUE" "$REGION"'''
+Rscript 08_dkt_regions_dream.R "$TISSUE" "$REGION"'''
 
     with open(os.path.join(script_dir, f'submit_chunk_{i+1}.sh'), "w") as file:
         file.write(slurm_script)

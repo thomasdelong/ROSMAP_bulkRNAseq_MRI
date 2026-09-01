@@ -4,10 +4,6 @@ library(limma)
 library(here)
 library(yaml)
 library(gprofiler2)
-library(ggrepel)
-library(eulerr)
-#library(ComplexUpset)
-#library(ComplexHeatmap)
 
 env <- read_yaml(here::here("01_environment.yml"))
 data_path <- env$paths$data

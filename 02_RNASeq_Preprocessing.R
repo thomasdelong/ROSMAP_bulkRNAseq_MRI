@@ -4,7 +4,7 @@ library(DESeq2)
 library(edgeR)
 library(yaml)
 
-env <- read_yaml(here::here("MRI_RNA_Code/01_environment.yml"))
+env <- read_yaml(here::here("01_environment.yml"))
 data_path <- env$paths$data
 scratch_path <- env$paths$scratch
 pdf(file = paste0(scratch_path, '/figures/supplemental/RNASeq_prepocessing.pdf'))
@@ -34,8 +34,15 @@ batch4 <- read.delim(paste0(data_path, "/ROSMAP_RNA/Rosmap_Gene_Quantification/R
 rna_combined <- left_join(rna_combined, batch4, by="feature")
 
 metadata <- read_csv(paste0(data_path, "/ROSMAP_RNA/Metadata/RNAseq_Harmonization_ROSMAP_combined_metadata.csv"))
-metadata_rnaSeq <- metadata %>%
+metadata_rnaSeq_original <- metadata %>%
   filter(assay == "rnaSeq")
+metadata_rnaSeq <- metadata %>% #added this because a small subset of people have more than one RNAseq per tissue
+  filter(is.na(exclude) | exclude != TRUE)%>%
+  filter(assay == "rnaSeq") %>%
+  group_by(projid, tissue) %>%
+  filter(RIN == max(RIN, na.rm = TRUE)) %>%
+  filter(readLength == max(readLength, na.rm = TRUE)) %>%
+  ungroup()
 
 # defining looping variables
 tissue_list <- c(
@@ -116,7 +123,9 @@ for (tissue in names(tissue_list)){
     'Metadata dimensions before: ', paste(dim(metadata_rnaSeq_full), collapse = " x "), '\n',
     'RNASeq dimensions before: ', paste(dim(rna_combined), collapse = " x "), '\n',
     'Metadata dimensions after: ', paste(dim(metadata_filtered), collapse = " x "), '\n',
-    'RNASeq dimensions after: ', paste(dim(rna_filtered), collapse = " x ")
+    'RNASeq dimensions after: ', paste(dim(rna_filtered), collapse = " x "), '\n',
+    'specimens: ', paste(length(unique(rownames(metadata_filtered)))), '\n',
+    'subjects: ', paste(length(unique(metadata_filtered$projid)))
   )
   )
   head(metadata_filtered[1:5])
