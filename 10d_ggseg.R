@@ -7,18 +7,21 @@ library(ggsegFreeSurfer)
 env <- read_yaml(here::here("01_environment.yml"))
 scratch_path <- env$paths$scratch
 
-ref_tissue <- 'temporalcortex'
-ref_parcel <- 'superiortemporal'
-ref_feature <- 'ThickAvg'
-# ref_tissue <- 'posteriorcingulatecortex'
-# ref_parcel <- 'entorhinal'
-# ref_feature <- 'CurvInd'
+# ref_tissue <- 'temporalcortex'
+# ref_parcel <- 'superiortemporal'
+# ref_feature <- 'ThickAvg'
+ref_tissue <- 'posteriorcingulatecortex'
+ref_parcel <- 'entorhinal'
+ref_feature <- 'CurvInd'
+# ref_tissue <- 'Headofcaudatenucleus'
+# ref_parcel <- 'insula'
+# ref_feature <- 'ThickAvg'
 ref_fullname <- paste(ref_tissue, ref_parcel, ref_feature, sep = '_')
 
 rrho_file <- paste0(scratch_path, paste0("/processed_data/rrho/", ref_fullname, '.csv')) 
-rrho_data <- read.csv(rrho_file) %>%
-    mutate(rrho_max = if_else(tissue == ref_tissue & parcel == ref_parcel & feature == ref_feature,
-                             NA, rrho_max))
+rrho_data <- read.csv(rrho_file) #%>%
+    # mutate(rrho_max = if_else(tissue == ref_tissue & parcel == ref_parcel & feature == ref_feature,
+    #                          NA, rrho_max))
 
 
 regions <- c("dlpfc", "tc", "fc", "hcn", "pcc")
@@ -39,14 +42,14 @@ plot_rrho <- function(region_abbrev, mri_feature) {
 
   p <- ggplot() +
     geom_brain(data = region_data,
-               mapping = aes(fill = .data$rrho_max),
+               mapping = aes(fill = .data$rrho_mean),
                hemi = "left",
                view = c("lateral", "medial"),
                atlas = dkt(),
                position = position_brain(hemi ~ view),
                color = "black") +
     scale_fill_gradient2(low = "white", high = "purple",
-                          limits = c(0, max(rrho_data$rrho_max)),
+                          limits = c(0, max(rrho_data$rrho_mean)),
                           name = "Max RRHO -log10(p)",
                           na.value = "black") +
     theme_void() +

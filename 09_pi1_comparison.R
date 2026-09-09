@@ -65,9 +65,9 @@ plot_pi1 <- function(region_abbrev, mri_feature) {
              view = c("lateral", "medial"),
              atlas = dkt(),
              position = position_brain(hemi ~ view),
-             color = "black") +
+             color = "black", linewidth = 0.01) +
   scale_fill_gradient2(low = "white", high = "purple",
-                        limits = c(0, 0.420), name = "\u03c01", #catch 22 with the scale here. need to rewrite so the pi1 calculations happen in a different loop. or just run it once then set it manually if anything is out of scale
+                        limits = c(0, 0.425), name = "\u03c01", #catch 22 with the scale here. need to rewrite so the pi1 calculations happen in a different loop. or just run it once then set it manually if anything is out of scale
                         na.value = "grey") +
   theme_void() +
   theme(legend.position = "none", plot.margin = unit(c(0, 10, 0, 0), units = "points"))

@@ -86,7 +86,7 @@ compute_rank_similarity <- function(region_abbrev, mri_feature, n_perm = 1000) {
 plot_rank_similarity <- function(region_abbrev, mri_feature) {
   d <- compute_rank_similarity(region_abbrev, mri_feature)
   if (is.null(d)) return(invisible(NULL))
-
+  #d <- d %>% mutate(r_obs = case_when(dkt_region == 'entorhinal' ~ 1, dkt_region != 'entorhinal' ~ 0))
   p_r <- ggplot() +
     geom_brain(data = d,
                mapping = aes(fill = .data$r_obs),
