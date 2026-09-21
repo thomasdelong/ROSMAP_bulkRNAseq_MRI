@@ -363,6 +363,9 @@ with PdfPages(os.path.join(scratch_path, 'figures/supplemental/06_MRI_PCA_before
     pdf.savefig(fig, bbox_inches='tight')
 plt.close(fig)
 
+precombat_data_path = os.path.join(scratch_path, "processed_data/DKT_stats_before_combat.csv")
+combat_input.to_csv(precombat_data_path, index=False)
+
 # Combat
 covars = combat_input[[batcheffect]]
 data_combat = neuroCombat.neuroCombat(dat=scaled_before.T, covars=covars, batch_col=batcheffect)["data"].T

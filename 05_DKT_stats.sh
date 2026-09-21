@@ -21,7 +21,7 @@ for subject_dir in "$FS_BASE_DIR"/sub-*; do
     
     # Loop through each session
     for session_dir in "$subject_dir"/ses-*; do
-        session_id=$(basename "$session_dir")
+        
         # Set SUBJECTS_DIR to the specific session's output directory
         export SUBJECTS_DIR="$session_dir/output"
 

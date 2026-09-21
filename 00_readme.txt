@@ -2,6 +2,7 @@
 08 was giving me job submission issues (couldn't do one array since it was over the submission limit).
     currently splits into multiple scripts, need to add something that submits them and waits if they fail
 ggseg and ggsegFreeSurfer aren't on conda (same with neurocombat) 
+10b needs dynamic pathing for the conda env
 
 #ENVIRONMENT
 01_environment.yml needs to be edited with paths to your code, data, and scratch folders (described below)
