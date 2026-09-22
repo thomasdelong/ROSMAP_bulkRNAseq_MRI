@@ -338,13 +338,16 @@ combat_input = pd.merge(
     on=['Subject', 'Session'], how='left'
 )
 n_before_qc = len(combat_input)
-combat_input = combat_input[combat_input['surfaceholes'] <= SURFACEHOLES_THRESHOLD].drop(columns=['surfaceholes'])
+combat_input = (combat_input[combat_input['surfaceholes'] <= SURFACEHOLES_THRESHOLD].drop(columns=['surfaceholes']).reset_index(drop=True))
 print(f"Surface holes QC: dropped {n_before_qc - len(combat_input)} / {n_before_qc} scans (threshold={SURFACEHOLES_THRESHOLD})\n")
+assert not combat_input.duplicated(subset=['Subject','Session']).any()
 
 # make PCA plot before combat
+combat_input = combat_input.drop(['BrainSegVol','BrainSegVolNotVent','BrainSegVolNotVentSurf','SupraTentorialVol','SupraTentorialVolNotVent'], axis ='columns')
+precombat_data_path = os.path.join(scratch_path, "processed_data/DKT_stats_before_combat.csv")
+combat_input.to_csv(precombat_data_path, index=False)
 meta_cols = ['Subject', 'Session', batcheffect]
 feature_cols = [c for c in combat_input.columns if c not in meta_cols]
-
 numeric_features = combat_input[feature_cols].apply(pd.to_numeric, errors='coerce').fillna(0)
 
 scaled_before = StandardScaler().fit_transform(numeric_features)
@@ -363,13 +366,16 @@ with PdfPages(os.path.join(scratch_path, 'figures/supplemental/06_MRI_PCA_before
     pdf.savefig(fig, bbox_inches='tight')
 plt.close(fig)
 
-precombat_data_path = os.path.join(scratch_path, "processed_data/DKT_stats_before_combat.csv")
-combat_input.to_csv(precombat_data_path, index=False)
+
 
 # Combat
 covars = combat_input[[batcheffect]]
 data_combat = neuroCombat.neuroCombat(dat=scaled_before.T, covars=covars, batch_col=batcheffect)["data"].T
 combat_df = pd.DataFrame(data_combat, columns=feature_cols).apply(pd.to_numeric, errors='coerce')
+n_nan = combat_df.isna().sum().sum()
+n_inf = np.isinf(data_combat).sum()
+print("NA and infinite value count:")
+print(n_nan, n_inf)
 combat_df = combat_df.fillna(combat_df.mean())
 
 # PCA after
