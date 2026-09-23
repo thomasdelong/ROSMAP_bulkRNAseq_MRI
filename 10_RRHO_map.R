@@ -9,14 +9,12 @@ env <- read_yaml(here::here("01_environment.yml"))
 scratch_path <- env$paths$scratch
 
 # ref_tissue <- 'temporalcortex'
-# ref_parcel <- 'superiortemporal'
-# ref_feature <- 'ThickAvg'
-ref_tissue <- 'posteriorcingulatecortex'
-ref_parcel <- 'entorhinal'
-ref_feature <- 'CurvInd'
-# ref_tissue <- 'Headofcaudatenucleus'
-# ref_parcel <- 'insula'
-# ref_feature <- 'ThickAvg'
+# ref_parcel <- 'parsorbitalis'
+# ref_feature <- 'SurfArea_norm'
+ref_tissue <- 'frontalcortex'
+ref_parcel <- 'lateraloccipital'
+ref_feature <- 'ThickAvg'
+
 ref_fullname <- paste(ref_tissue, ref_parcel, ref_feature, sep = '_')
 print(ref_fullname)
 tt_dir <- paste0(scratch_path, "/processed_data/toptables/dkt/")
