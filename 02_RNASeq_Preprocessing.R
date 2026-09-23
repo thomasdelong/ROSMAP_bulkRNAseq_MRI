@@ -280,8 +280,11 @@ for (tissue in names(tissue_list)){
   low_exp_genes <- read.csv(paste0(scratch_path, "/processed_data/genes_pass_in_all_tissues.csv"))
   cleaned_filtered_corrected_counts <- cleaned_corrected_counts[, colnames(cleaned_corrected_counts) %in% low_exp_genes$gene]
 
-  matched_indices <- match(rownames(tech_covariates_clean),rownames(metadata_filtered))
-  design_matrix <- metadata_filtered[matched_indices[!is.na(matched_indices)], c('msex','cogdx'), drop = TRUE]
+  # removeBatchEffect needs a model matrix with an intercept, and cogdx is a diagnosis code rather than a number.
+  # Without the intercept the batch and covariate terms absorb each gene's mean, which limma >= 3.66 no longer cancels.
+  design_data <- metadata_filtered[rownames(tech_covariates_clean), c('msex', 'cogdx')]
+  stopifnot(!anyNA(design_data))
+  design_matrix <- model.matrix(~ msex + factor(cogdx), data = design_data)
 
   tech_covariates_clean_filtered <- tech_covariates_clean %>%
     dplyr::select(-sequencingBatch, -assay, -projid, -notes,-isStranded,-runType,-Study,-Number.of.splices..Non.canonical,-X..of.reads.unmapped..too.many.mismatches,-Number.of.chimeric.reads,-X..of.chimeric.reads) %>%
