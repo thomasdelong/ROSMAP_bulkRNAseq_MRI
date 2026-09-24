@@ -7,16 +7,7 @@ library(ggsegFreeSurfer)
 env <- read_yaml(here::here("01_environment.yml"))
 scratch_path <- env$paths$scratch
 
-# ref_tissue <- 'temporalcortex'
-# ref_parcel <- 'superiortemporal'
-# ref_feature <- 'ThickAvg'
-ref_tissue <- 'posteriorcingulatecortex'
-ref_parcel <- 'entorhinal'
-ref_feature <- 'CurvInd'
-# ref_tissue <- 'Headofcaudatenucleus'
-# ref_parcel <- 'insula'
-# ref_feature <- 'ThickAvg'
-ref_fullname <- paste(ref_tissue, ref_parcel, ref_feature, sep = '_')
+source(here::here("10_reference.R"))
 
 rrho_file <- paste0(scratch_path, paste0("/processed_data/rrho/", ref_fullname, '.csv')) 
 rrho_data <- read.csv(rrho_file) #%>%
