@@ -79,7 +79,9 @@ module load freesurfer/8.2.0-1
         session_id = path_parts[-2]
         session_output_dir = os.path.join(output_file_dir, subject_id, session_id, "output")
         os.makedirs(session_output_dir, exist_ok=True)
-        slurm_script += f'\nrecon-all -i {mri_file} -sd {session_output_dir} -subjid {subject_id} -all -clean &'
+        # recon-all exits when -i is given and the subject folder already exists, so clear the failed run first
+        subject_dir = os.path.join(session_output_dir, subject_id)
+        slurm_script += f'\n(rm -rf {subject_dir} && recon-all -i {mri_file} -sd {session_output_dir} -subjid {subject_id} -all -clean) &'
     slurm_script += '\nwait'
 
     script_file = os.path.join(output_dir, f"recon-all_retry_{batch_number+1}.sh")
