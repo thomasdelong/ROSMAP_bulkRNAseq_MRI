@@ -178,8 +178,10 @@ results_r <- data.frame(matrix(NA, nrow = length(pi1_dataframes),
 
 for (df in pi1_dataframes){
     for (df2 in pi1_dataframes){
-        results[df, df2] <- random_shuffle(get(df)$pi1, get(df2)$pi1, 10000)$p_pearson
-        results_r[df, df2] <- cor(get(df)$pi1, get(df2)$pi1, method = 'pearson')
+        # pair regions by label, not row position, so a map missing a region cannot shift the pairing
+        paired <- inner_join(get(df), get(df2), by = 'label')
+        results[df, df2] <- random_shuffle(paired$pi1.x, paired$pi1.y, 10000)$p_pearson
+        results_r[df, df2] <- cor(paired$pi1.x, paired$pi1.y, method = 'pearson')
     }
 }
 
