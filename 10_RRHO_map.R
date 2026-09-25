@@ -11,9 +11,12 @@ scratch_path <- env$paths$scratch
 # ref_tissue <- 'temporalcortex'
 # ref_parcel <- 'parsorbitalis'
 # ref_feature <- 'SurfArea_norm'
-ref_tissue <- 'frontalcortex'
-ref_parcel <- 'lateraloccipital'
-ref_feature <- 'ThickAvg'
+# ref_tissue <- 'frontalcortex'
+# ref_parcel <- 'lateraloccipital'
+# ref_feature <- 'ThickAvg'
+ref_tissue <- 'temporalcortex'
+ref_parcel <- 'middletemporal'
+ref_feature <- 'GrayVol_norm'
 
 ref_fullname <- paste(ref_tissue, ref_parcel, ref_feature, sep = '_')
 print(ref_fullname)

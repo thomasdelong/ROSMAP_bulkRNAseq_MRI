@@ -395,6 +395,20 @@ with PdfPages(os.path.join(scratch_path, 'figures/supplemental/06_MRI_PCA_after.
     pdf.savefig(fig, bbox_inches='tight')
 plt.close(fig)
 
+meta_with_PCs = pd.merge(combat_input, global_DKT_stats, on=['Subject', 'Session'], how='inner')
+for i in range(1, 11):
+    meta_with_PCs[f'PC{i}'] = pca_after[:, i - 1]
+
+fig = plt.figure(figsize=(10, 8))
+sns.scatterplot(x='PC1', y='PC2', hue='eTIV', data=meta_with_PCs, palette = 'viridis')
+plt.title(f'PCA of MRI Features After {batcheffect} Removal')
+plt.xlabel('Principal Component 1')
+plt.ylabel('Principal Component 2')
+plt.legend(title='eTIV', loc='best')
+with PdfPages(os.path.join(scratch_path, 'figures/supplemental/06_MRI_PCA_after_etiv.pdf')) as pdf:
+    pdf.savefig(fig, bbox_inches='tight')
+plt.close(fig)
+
 for i in range(10):
     combat_input[f'PC{i+1}'] = pca_after[:, i]
 

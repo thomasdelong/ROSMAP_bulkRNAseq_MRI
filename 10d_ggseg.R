@@ -7,15 +7,17 @@ library(ggsegFreeSurfer)
 env <- read_yaml(here::here("01_environment.yml"))
 scratch_path <- env$paths$scratch
 
+
 # ref_tissue <- 'temporalcortex'
-# ref_parcel <- 'superiortemporal'
+# ref_parcel <- 'parsorbitalis'
+# ref_feature <- 'SurfArea_norm'
+# ref_tissue <- 'frontalcortex'
+# ref_parcel <- 'lateraloccipital'
 # ref_feature <- 'ThickAvg'
-ref_tissue <- 'posteriorcingulatecortex'
-ref_parcel <- 'entorhinal'
-ref_feature <- 'CurvInd'
-# ref_tissue <- 'Headofcaudatenucleus'
-# ref_parcel <- 'insula'
-# ref_feature <- 'ThickAvg'
+ref_tissue <- 'temporalcortex'
+ref_parcel <- 'middletemporal'
+ref_feature <- 'GrayVol_norm'
+
 ref_fullname <- paste(ref_tissue, ref_parcel, ref_feature, sep = '_')
 
 rrho_file <- paste0(scratch_path, paste0("/processed_data/rrho/", ref_fullname, '.csv')) 
@@ -48,7 +50,7 @@ plot_rrho <- function(region_abbrev, mri_feature) {
                atlas = dkt(),
                position = position_brain(hemi ~ view),
                color = "black") +
-    scale_fill_gradient2(low = "white", high = "purple",
+    scale_fill_gradient2(low = "#191970", high = "#b22222",
                           limits = c(0, max(rrho_data$rrho_mean)),
                           name = "Max RRHO -log10(p)",
                           na.value = "black") +
