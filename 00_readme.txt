@@ -44,3 +44,5 @@ In 04_Freesurfer_MRI_Processing.py, you will need to change the lines that load 
 08/08b: this is currently inelegant, you've gotta run 08b to make array jobs then run them manually 
     from MRI_RNA_Scratch/08_slurm with sbatch. I did it like this because the amount of dream runs 
     was larger than the job limit on the cluster.
+11: I'm putting the SEAAD-derived cell class markers in the code folder since it's a small file.
+    Probably need to add the code I used to make that but it's going to be annoying to get Seurat in the environment
