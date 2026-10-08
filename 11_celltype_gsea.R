@@ -6,6 +6,9 @@ library(yaml)
 env <- read_yaml(here::here("01_environment.yml"))
 scratch_path <- env$paths$scratch
 code_path <- env$paths$code
+#select an example parcel/feature to generate plots for
+reference_parcel <- 'middletemporal'
+reference_feature <- 'GrayVol_norm'
 
 ##pull list of markers from Seurat findallmarkers output
 seaad_classlevel <- read.csv(paste0(code_path,"/data/seaad_class_markers.csv"))
@@ -83,6 +86,7 @@ for (rna_region in regions){
                  minSize = 10,
                  maxSize = 500,
                  nproc = 1) 
+        
         for (cell in unique(seaad_classlevel_topn$subclass)){
             cell_result <- filter(GSEAresult, pathway == cell)
             data_to_bind <- data.frame(rna_region = paste0(rna_region), 
@@ -94,6 +98,13 @@ for (rna_region in regions){
             updated_results <- rbind(all_cell_results, data_to_bind)
             assign(paste0(cell, "_results"), updated_results)
         }
+
+        if (reg == reference_parcel && feat == reference_feature){
+            plot <- plotGseaTable(seaad_classlevel_topn_lists, generankings, GSEAresult)
+                ggsave(file = paste0(scratch_path, "/figures/supplemental/11_GSEAtable_",rna_region, ".",reg,".",feat,".svg"),
+                    plot = plot, width = 4, height = 10, device = svg)
+        }
+        
     }
 }
 
