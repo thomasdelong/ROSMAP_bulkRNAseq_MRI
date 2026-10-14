@@ -37,7 +37,12 @@ projid_mapping <- read.csv(paste0(data_path, "/ROSMAP_RNA/Metadata/RNAseq_Harmon
 projid_mapping <- subset(projid_mapping, assay == 'rnaSeq' & specimenID %in% colnames(rnaseq_df_unfiltered))[c('specimenID','projid', 'tissue')] 
 rosmaster_df <- read.csv(paste0(data_path, "/ROSMAP_RNA/Metadata/rosmaster.csv"))
 side <- read.csv(paste0(data_path, "/ROSMAP_RNA/Metadata/rosmapAD_data_phenotypes_masterBrainSide.csv"))
-confounds_df <- read.csv(paste0(data_path, "/ROSMAP_MRI/rosmapAD_data_imaging_confounds_ageScan.csv"))
+#confounds_df <- read.csv(paste0(data_path, "/ROSMAP_MRI/rosmapAD_data_imaging_confounds_ageScan.csv"))
+mri_info_df <- read.csv(paste0(scratch_path, '/processed_data/MRI_age_info.csv')) %>%
+  group_by(Subject) %>%
+  filter(Session == max(Session)) %>%
+  ungroup() %>%
+  rename(projid = Subject)
 wholebrain_all <- read.csv(paste0(scratch_path, "/processed_data/DKT_stats_combat_global.csv")) %>%
     rename(projid = Subject)
 projid_mapping_subset <- subset(projid_mapping, projid %in% wholebrain_all$projid)
@@ -50,7 +55,7 @@ paste0('sample ids in RNA data: ', length(unique(colnames(rnaseq_df))))
 
 # Calculate the age difference
 merged_age <- merge(rosmaster_df[, c("projid", "age_death", "msex", "cogdx", "gpath", "cogn_global_random_slope", "educ")],
-                    confounds_df[, c("projid", "age_scan")], by = "projid") %>%
+                    mri_info_df[, c("projid", "age_scan")], by = "projid") %>%
               merge(side[,c('projid', 'master_brain_side')], by = 'projid')
 merged_age <- merged_age %>%
   group_by(projid) %>% 

@@ -264,7 +264,7 @@ if not unmatched_batch.empty:
     print(unmatched_batch.to_string(index=False))
 print()
 
-# matching with the age_scan data - need this later so we know age at scan (rosmaster stops at 90 for some reason)
+# new merge logic using ID_list to join based on mri date
 
 imaging_metadata_path = os.path.join(data_path, 'ROSMAP_MRI/rosmapAD_data_imaging_confounds_ageScan.csv')
 mri_info_df = pd.read_csv(imaging_metadata_path)
@@ -277,54 +277,17 @@ assert bad_dates.empty, f"Found mri_date values that aren't 5 or 6 digits after 
 mri_info_df['mri_date'] = pd.to_datetime(mri_info_df['mri_date'], format='%y%m%d')
 mri_info_df = mri_info_df.sort_values(['Subject', 'mri_date']).reset_index(drop=True)
 
-sessions_with_mri = DKT_stats[['Subject', 'Session']].drop_duplicates().sort_values(['Subject', 'Session'])
-sessions_with_mri['Subject'] = sessions_with_mri['Subject'].astype(str)
-
-assigned_groups = []
-count_mismatches = []
-missing_from_info = []
-
-dkt_subjects = set(sessions_with_mri['Subject'])
-info_subjects = set(mri_info_df['Subject'])
-
-for subject in dkt_subjects - info_subjects:
-    n_sessions = len(sessions_with_mri.loc[sessions_with_mri['Subject'] == subject])
-    missing_from_info.append({'Subject': subject, 'n_dkt_sessions': n_sessions})
-
-for subject, group in mri_info_df.groupby('Subject', group_keys=False):
-    known_sessions = sessions_with_mri.loc[sessions_with_mri['Subject'] == subject, 'Session'].tolist()
-    if not known_sessions:
-        continue
-    if len(group) != len(known_sessions):
-        count_mismatches.append({
-            'Subject': subject, 'n_scans_in_info': len(group),
-            'n_dkt_sessions': len(known_sessions), 'dkt_sessions': known_sessions
-        })
-        n = min(len(group), len(known_sessions))
-        group = group.copy().sort_values('mri_date').iloc[:n]
-        group['Session'] = known_sessions[:n]
-        assigned_groups.append(group)
-        continue
-    group = group.copy()
-    group['Session'] = known_sessions
-    assigned_groups.append(group)
-
-mri_info_assigned = pd.concat(assigned_groups, ignore_index=True) if assigned_groups else mri_info_df.iloc[0:0]
-mri_info_assigned['Subject'] = mri_info_assigned['Subject'].astype(int)
-mri_info_assigned['Session'] = mri_info_assigned['Session'].astype(int)
-
-age_info = mri_info_assigned[['Subject', 'Session', 'age_scan', 'mri_date']].drop_duplicates(subset=['Subject', 'Session'])
-matched_age_pairs = age_info[['Subject', 'Session']].drop_duplicates()
-unmatched_age = pd.merge(dkt_pairs, matched_age_pairs, on=['Subject', 'Session'], how='left', indicator=True)
-unmatched_age = unmatched_age.query('_merge == "left_only"').drop(columns='_merge')
+ID_list_path = os.path.join(data_path, 'ROSMAP_MRI/ID_list.csv')
+ID_list = pd.read_csv(ID_list_path)
+ID_list['Subject'] = ID_list['sub_id'].str.replace('sub-', '', regex=False)
+ID_list['Session'] = ID_list['ses_id'].str.replace('ses-', '', regex=False).astype(int)
+ID_list['DateRaw'] = ID_list['scandate_visit_projID'].str.split(pat='_').str[0]
+ID_list['mri_date'] = pd.to_datetime(ID_list['DateRaw'], format='%Y%m%d')
+ID_list = ID_list.drop(columns = ['sub_id', 'ses_id', 'scandate_visit_projID', 'DateRaw'])
+age_info = pd.merge(ID_list, mri_info_df, on = ['Subject', 'mri_date'])
 
 age_info_path = os.path.join(scratch_path, "processed_data/MRI_age_info.csv")
 age_info.to_csv(age_info_path, index=False)
-
-print("Age info (mri_info_df) matching")
-print(f"DKT (Subject, Session) pairs: {len(dkt_pairs)}")
-print(f"Matched with age: {len(matched_age_pairs)}")
-print(f"Unmatched: {len(unmatched_age)}\n")
 
 # Drop ones with a lot of holes (assuming that's due to lots of movement)
 

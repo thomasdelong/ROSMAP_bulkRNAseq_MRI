@@ -66,7 +66,7 @@ plot_pi1 <- function(region_abbrev, mri_feature) {
              atlas = dkt(),
              position = position_brain(hemi ~ view),
              color = "black", linewidth = 0.1) +
-  scale_fill_gradient2(low = "white", high = "#8b0000",
+  scale_fill_gradient2(low = "white", high = "#740092",
                         limits = c(0, 0.425), name = "\u03c01", #catch 22 with the scale here. need to rewrite so the pi1 calculations happen in a different loop. or just run it once then set it manually if anything is out of scale
                         na.value = "grey") +
   theme_void() +
@@ -75,6 +75,22 @@ plot_pi1 <- function(region_abbrev, mri_feature) {
  
   write.csv(feature_truenull, paste0(pi1maps_dir, region_abbrev, "_", mri_feature, ".csv"), row.names = FALSE)
 }
+colorbar <- ggplot(data.frame(nes = seq(-3, 3, length.out = 200)),
+                   aes(x = 1, y = nes, fill = nes)) +
+  geom_raster() +
+  scale_fill_gradient2(low = "white", high = "#740092",
+                        limits = c(0, 0.425), name = "\u03c01") +
+  scale_x_continuous(expand = c(0, 0)) +
+  scale_y_continuous(position = "right", expand = c(0, 0),
+                     breaks = c(0,0.1,0.2,0.3,0.4)) +
+  labs(y = "\u03c01") +
+  theme_void() +
+  theme(legend.position = "none",
+        axis.text.y = element_text(size = 8),
+        axis.title.y = element_text(size = 9, face = "bold", angle = 0,
+                                    vjust = 0.5))
+ggsave(file = paste0(scratch_path, "/figures/main/09_brainmap_colorbar.svg"),
+       plot = colorbar, width = 3, height = 8, device = svg)
 
 top_pi1 <- 0
 
