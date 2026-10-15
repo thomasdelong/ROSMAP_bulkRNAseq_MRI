@@ -263,12 +263,14 @@ for (tissue in names(tissue_list)){
   na_per_row <- rowSums(is.na(tech_covariates))
   print(na_per_row)
 
+  model_covariates <- c('AlignmentSummaryMetrics__PCT_PF_READS_ALIGNED', 'RnaSeqMetrics__PCT_INTERGENIC_BASES', 'AlignmentSummaryMetrics__PF_READS_ALIGNED', 'Number.of.input.reads', 'RnaSeqMetrics__PF_ALIGNED_BASES', 'AlignmentSummaryMetrics__PF_HQ_ALIGNED_BASES', 'libraryPrep', 'RnaSeqMetrics__MEDIAN_5PRIME_BIAS', 'Mapping.speed..Million.of.reads.per.hour', 'RnaSeqMetrics__PCT_UTR_BASES', 'RIN', 'AlignmentSummaryMetrics__READS_ALIGNED_IN_PAIRS', 'AlignmentSummaryMetrics__PF_HQ_ERROR_RATE', 'RnaSeqMetrics__INTRONIC_BASES', 'Average.mapped.length', 'X..of.reads.unmapped..too.short', 'AlignmentSummaryMetrics__PCT_ADAPTER', 'AlignmentSummaryMetrics__PF_MISMATCH_RATE', 'AlignmentSummaryMetrics__PCT_READS_ALIGNED_IN_PAIRS', 'RnaSeqMetrics__CORRECT_STRAND_READS', 'RnaSeqMetrics__PCT_INTRONIC_BASES')
   tech_covariates_clean <- tech_covariates[, !colnames(tech_covariates) %in% colnames(tech_covariates)[colSums(is.na(tech_covariates)) > 10]] %>%
     filter(sequencingBatch != '0, 6, 7') 
   if (tissue_abbreviation == 'pcc'){
-    tech_covariates_clean <- tech_covariates_clean %>%
-      filter(rownames(tech_covariates) != 'RISK_204')}
-  tech_covariates_clean <- na.omit(tech_covariates_clean)
+    tech_covariates_clean <- tech_covariates_clean[rownames(tech_covariates_clean) != 'RISK_204', ]}
+  # drop only samples missing something the correction uses; na.omit also dropped samples missing pmi, Study or projid
+  needed <- cbind(tech_covariates_clean[, c('sequencingBatch', model_covariates)], metadata_filtered[rownames(tech_covariates_clean), c('msex', 'cogdx')])
+  tech_covariates_clean <- tech_covariates_clean[complete.cases(needed), ]
   columns_to_keep <- colnames(assay(rld)) %in% rownames(tech_covariates_clean)
   cleaned_corrected_counts <- t(assay(rld)[, columns_to_keep])
   print("cleaned metadata dimensions:")
@@ -280,12 +282,13 @@ for (tissue in names(tissue_list)){
   low_exp_genes <- read.csv(paste0(scratch_path, "/processed_data/genes_pass_in_all_tissues.csv"))
   cleaned_filtered_corrected_counts <- cleaned_corrected_counts[, colnames(cleaned_corrected_counts) %in% low_exp_genes$gene]
 
-  matched_indices <- match(rownames(tech_covariates_clean),rownames(metadata_filtered))
-  design_matrix <- metadata_filtered[matched_indices[!is.na(matched_indices)], c('msex','cogdx'), drop = TRUE]
+  # removeBatchEffect needs a model matrix with an intercept, and cogdx is a diagnosis code rather than a number.
+  # Without the intercept the batch and covariate terms absorb each gene's mean, which limma >= 3.66 no longer cancels.
+  design_data <- metadata_filtered[rownames(tech_covariates_clean), c('msex', 'cogdx')]
+  stopifnot(!anyNA(design_data))
+  design_matrix <- model.matrix(~ msex + factor(cogdx), data = design_data)
 
-  tech_covariates_clean_filtered <- tech_covariates_clean %>%
-    dplyr::select(-sequencingBatch, -assay, -projid, -notes,-isStranded,-runType,-Study,-Number.of.splices..Non.canonical,-X..of.reads.unmapped..too.many.mismatches,-Number.of.chimeric.reads,-X..of.chimeric.reads) %>%
-    dplyr::select(AlignmentSummaryMetrics__PCT_PF_READS_ALIGNED, RnaSeqMetrics__PCT_INTERGENIC_BASES, AlignmentSummaryMetrics__PF_READS_ALIGNED, Number.of.input.reads, RnaSeqMetrics__PF_ALIGNED_BASES, AlignmentSummaryMetrics__PF_HQ_ALIGNED_BASES, libraryPrep, RnaSeqMetrics__MEDIAN_5PRIME_BIAS, Mapping.speed..Million.of.reads.per.hour, RnaSeqMetrics__PCT_UTR_BASES, RIN, AlignmentSummaryMetrics__READS_ALIGNED_IN_PAIRS, AlignmentSummaryMetrics__PF_HQ_ERROR_RATE, RnaSeqMetrics__INTRONIC_BASES, Average.mapped.length, X..of.reads.unmapped..too.short, AlignmentSummaryMetrics__PCT_ADAPTER, AlignmentSummaryMetrics__PF_MISMATCH_RATE, AlignmentSummaryMetrics__PCT_READS_ALIGNED_IN_PAIRS, RnaSeqMetrics__CORRECT_STRAND_READS, RnaSeqMetrics__PCT_INTRONIC_BASES)
+  tech_covariates_clean_filtered <- tech_covariates_clean[, model_covariates]
   tech_covariates_clean_filtered$libraryPrep <- as.integer(factor(tech_covariates_clean_filtered$libraryPrep))
   covars_numeric <- as.data.frame(lapply(tech_covariates_clean_filtered, function(x) as.numeric(as.character(x))))
 
