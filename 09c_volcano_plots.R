@@ -2,6 +2,7 @@ library(yaml)
 library(tidyverse)
 library(gprofiler2)
 library(ggrepel)
+library(ggrastr)
 
 env <- read_yaml(here::here("01_environment.yml"))
 scratch_path <- env$paths$scratch
@@ -39,7 +40,7 @@ example_for_names <- read.csv(paste0(scratch_path, "/processed_data/toptables/dk
 genenames <- gconvert(example_for_names$X, filter_na = FALSE) %>% dplyr::select(target, name)
 
 
-region_colors <- c(dlpfc = "#D55E00", fc = "#0041b2", hcn = "#057820", pcc = "#80041d", tc = "#e19a00")
+region_colors <- c(dlpfc = "#e90000", fc = "#0041b2", tc = "#e19a00", pcc = "#04801b", hcn = "#D55E00")
 
 top_tts <- highest_by_RNA_region %>%
   pmap(function(RNA_region, tissue_name, dkt_region, mri_feature, ...) {
@@ -76,10 +77,10 @@ for (tissue in top_gene_per_region$RNA_region) {
   labeled <- tt %>% inner_join(genes_to_label, by = "X")
 
   p <- ggplot(tt, aes(x = logFC, y = -log10(P.Value))) +
-    geom_point(aes(color = BH_1)) +
-    #geom_point(data = labeled, shape = 21, fill = NA, color = "black", size = 3, stroke = 0.8) +
+    geom_point_rast(aes(color = BH_1), raster.dpi = 600) +
     labs(color = "q < 0.1") +
     xlab("β") +
+    ylim(0,8) +
     scale_color_manual(values = c("FALSE" = "gray", "TRUE" = plot_color)) +
     theme_bw() +
     theme(panel.grid.major = element_blank(),
