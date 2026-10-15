@@ -256,22 +256,22 @@ save_heatmap(heatmap_curvature, paste0(scratch_path, "/figures/supplemental/09_c
 
 
 
-# tccurvind <- read.csv(paste0(scratch_path, "/processed_data/toptables/dkt/temporalcortex/middletemporal.CurvInd.csv"))
-# svg(filename=paste0(scratch_path, "/figures/supplemental/09_TCmiddletemporalcurvind.svg"), width=10, height=3)
-# hist(tccurvind$P.Value, main = paste("TC Genes vs. Middle Temporal Curvature Index p-values"), breaks = 100, border = 'transparent', col = '#9c61ba', ylim = c(0,1500), xlab = 'p-value (100 bins)')
-# dev.off()
-
-# hcncurvind <- read.csv(paste0(scratch_path, "/processed_data/toptables/dkt/Headofcaudatenucleus/middletemporal.CurvInd.csv"))
-# svg(filename=paste0(scratch_path, "/figures/supplemental/09_HCNmiddletemporalcurvind.svg"), width=10, height=3)
-# hist(hcncurvind$P.Value, main = paste("HCN Genes vs. Middle Temporal Curvature Index p-values"), breaks = 100, border = 'transparent', col = '#9c61ba', ylim = c(0,1500), xlab = 'p-value (100 bins)')
-# dev.off()
-
-pcccurvind <- read.csv(paste0(scratch_path, "/processed_data/toptables/dkt/posteriorcingulatecortex/entorhinal.CurvInd.csv"))
-svg(filename=paste0(scratch_path, "/figures/main/09_PCCentorhinalcurvind.svg"), width=10, height=3)
-hist(pcccurvind$P.Value, main = paste("PCC Genes vs. Entorhinal Curvature Index p-values"), breaks = 100, border = 'transparent', col = '#9c61ba', ylim = c(0,1500), xlab = 'p-value (100 bins)')
+tccurvind <- read.csv(paste0(scratch_path, "/processed_data/toptables/dkt/temporalcortex/middletemporal.CurvInd.csv"))
+svg(filename=paste0(scratch_path, "/figures/supplemental/09_TCmiddletemporalcurvind.svg"), width=10, height=3)
+hist(tccurvind$P.Value, main = paste("TC Genes vs. Middle Temporal Curvature Index p-values"), breaks = 100, border = 'transparent', col = '#9c61ba', ylim = c(0,1500), xlab = 'p-value (100 bins)')
 dev.off()
 
-hcncurvind <- read.csv(paste0(scratch_path, "/processed_data/toptables/dkt/Headofcaudatenucleus/entorhinal.CurvInd.csv"))
-svg(filename=paste0(scratch_path, "/figures/main/09_HCNentorhinalcurvind.svg"), width=10, height=3)
-hist(hcncurvind$P.Value, main = paste("HCN Genes vs. Entorhinal Curvature Index p-values"), breaks = 100, border = 'transparent', col = '#9c61ba', ylim = c(0,1500), xlab = 'p-value (100 bins)')
+hcncurvind <- read.csv(paste0(scratch_path, "/processed_data/toptables/dkt/Headofcaudatenucleus/middletemporal.CurvInd.csv"))
+svg(filename=paste0(scratch_path, "/figures/supplemental/09_HCNmiddletemporalcurvind.svg"), width=10, height=3)
+hist(hcncurvind$P.Value, main = paste("HCN Genes vs. Middle Temporal Curvature Index p-values"), breaks = 100, border = 'transparent', col = '#9c61ba', ylim = c(0,1500), xlab = 'p-value (100 bins)')
 dev.off()
+
+# pcccurvind <- read.csv(paste0(scratch_path, "/processed_data/toptables/dkt/posteriorcingulatecortex/entorhinal.CurvInd.csv"))
+# svg(filename=paste0(scratch_path, "/figures/main/09_PCCentorhinalcurvind.svg"), width=10, height=3)
+# hist(pcccurvind$P.Value, main = paste("PCC Genes vs. Entorhinal Curvature Index p-values"), breaks = 100, border = 'transparent', col = '#9c61ba', ylim = c(0,1500), xlab = 'p-value (100 bins)')
+# dev.off()
+
+# hcncurvind <- read.csv(paste0(scratch_path, "/processed_data/toptables/dkt/Headofcaudatenucleus/entorhinal.CurvInd.csv"))
+# svg(filename=paste0(scratch_path, "/figures/main/09_HCNentorhinalcurvind.svg"), width=10, height=3)
+# hist(hcncurvind$P.Value, main = paste("HCN Genes vs. Entorhinal Curvature Index p-values"), breaks = 100, border = 'transparent', col = '#9c61ba', ylim = c(0,1500), xlab = 'p-value (100 bins)')
+# dev.off()
