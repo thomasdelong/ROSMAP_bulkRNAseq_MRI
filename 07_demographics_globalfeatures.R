@@ -39,12 +39,19 @@ rosmaster_df <- read.csv(paste0(data_path, "/ROSMAP_RNA/Metadata/rosmaster.csv")
 side <- read.csv(paste0(data_path, "/ROSMAP_RNA/Metadata/rosmapAD_data_phenotypes_masterBrainSide.csv"))
 #confounds_df <- read.csv(paste0(data_path, "/ROSMAP_MRI/rosmapAD_data_imaging_confounds_ageScan.csv"))
 mri_info_df <- read.csv(paste0(scratch_path, '/processed_data/MRI_age_info.csv')) %>%
-  group_by(Subject) %>%
-  filter(Session == max(Session)) %>%
-  ungroup() %>%
   rename(projid = Subject)
 wholebrain_all <- read.csv(paste0(scratch_path, "/processed_data/DKT_stats_combat_global.csv")) %>%
     rename(projid = Subject)
+# age at the scan the features come from: each donor's latest session in the ComBat features, joined on (projid, Session).
+# Taking the latest session of MRI_age_info separately can pick a later scan that has no FreeSurfer output or failed the
+# surface-holes QC.
+age_at_features <- wholebrain_all %>%
+  group_by(projid) %>%
+  filter(Session == max(Session)) %>%
+  ungroup() %>%
+  dplyr::select(projid, Session) %>%
+  inner_join(mri_info_df[, c("projid", "Session", "age_scan")], by = c("projid", "Session"))
+print(paste0('donors with features but no age at that session: ', length(setdiff(unique(wholebrain_all$projid), age_at_features$projid))))
 projid_mapping_subset <- subset(projid_mapping, projid %in% wholebrain_all$projid)
 
 rnaseq_df <- rnaseq_df_unfiltered[, colnames(rnaseq_df_unfiltered) %in% projid_mapping_subset$specimenID]
@@ -55,13 +62,8 @@ paste0('sample ids in RNA data: ', length(unique(colnames(rnaseq_df))))
 
 # Calculate the age difference
 merged_age <- merge(rosmaster_df[, c("projid", "age_death", "msex", "cogdx", "gpath", "cogn_global_random_slope", "educ")],
-                    mri_info_df[, c("projid", "age_scan")], by = "projid") %>%
+                    age_at_features[, c("projid", "age_scan")], by = "projid") %>%
               merge(side[,c('projid', 'master_brain_side')], by = 'projid')
-merged_age <- merged_age %>%
-  group_by(projid) %>% 
-  filter(age_scan == max(age_scan)) %>%
-  ungroup() %>%
-  filter(projid %in% wholebrain_all$projid)
 merged_age$age_diff <- merged_age$age_death - merged_age$age_scan
 wholebrain <- subset(wholebrain_all, projid %in% projid_mapping_subset$projid) %>%
   group_by(projid) %>%

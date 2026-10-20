@@ -264,27 +264,38 @@ if not unmatched_batch.empty:
     print(unmatched_batch.to_string(index=False))
 print()
 
-# new merge logic using ID_list to join based on mri date
+# Age at scan for every BIDS session.
+# ID_list (from RADC) gives each BIDS session's scan date. The scan-date table gives age_scan at each dated scan, and within
+# a person age_scan and mri_date imply one birth date (identical to the day across all of that person's scans), so the age
+# at any session is (session date - birth date). This dates every session in ID_list, including sessions whose date is
+# missing from the scan-date table. Subject stays the zero-padded 8-digit string used in BIDS: read_csv parses projid as an
+# integer, which drops leading zeros, so it is padded back before joining (otherwise every projid starting with 0 is lost).
 
 imaging_metadata_path = os.path.join(data_path, 'ROSMAP_MRI/rosmapAD_data_imaging_confounds_ageScan.csv')
 mri_info_df = pd.read_csv(imaging_metadata_path)
 mri_info_df.rename(columns={mri_info_df.columns[0]: 'Subject', mri_info_df.columns[3]: 'Scanner'}, inplace=True)
-mri_info_df['Subject'] = mri_info_df['Subject'].astype(str)
+mri_info_df['Subject'] = mri_info_df['Subject'].astype(int).astype(str).str.zfill(8)
 mri_info_df['mri_date'] = mri_info_df['mri_date'].astype(str)
 mri_info_df['mri_date'] = mri_info_df['mri_date'].apply(lambda x: '0' + x if len(x) == 5 else x)
 bad_dates = mri_info_df.loc[mri_info_df['mri_date'].str.len() != 6, 'mri_date']
 assert bad_dates.empty, f"Found mri_date values that aren't 5 or 6 digits after padding:\n{bad_dates.unique()}"
 mri_info_df['mri_date'] = pd.to_datetime(mri_info_df['mri_date'], format='%y%m%d')
-mri_info_df = mri_info_df.sort_values(['Subject', 'mri_date']).reset_index(drop=True)
+mri_info_df['birth_date'] = mri_info_df['mri_date'] - pd.to_timedelta(mri_info_df['age_scan'] * 365.25, unit='D')
+birth_date = mri_info_df.groupby('Subject')['birth_date'].median()
 
 ID_list_path = os.path.join(data_path, 'ROSMAP_MRI/ID_list.csv')
 ID_list = pd.read_csv(ID_list_path)
 ID_list['Subject'] = ID_list['sub_id'].str.replace('sub-', '', regex=False)
 ID_list['Session'] = ID_list['ses_id'].str.replace('ses-', '', regex=False).astype(int)
-ID_list['DateRaw'] = ID_list['scandate_visit_projID'].str.split(pat='_').str[0]
-ID_list['mri_date'] = pd.to_datetime(ID_list['DateRaw'], format='%Y%m%d')
-ID_list = ID_list.drop(columns = ['sub_id', 'ses_id', 'scandate_visit_projID', 'DateRaw'])
-age_info = pd.merge(ID_list, mri_info_df, on = ['Subject', 'mri_date'])
+ID_list['mri_date'] = pd.to_datetime(ID_list['scandate_visit_projID'].str.split(pat='_').str[0], format='%Y%m%d')
+ID_list['age_scan'] = (ID_list['mri_date'] - ID_list['Subject'].map(birth_date)).dt.days / 365.25
+age_info = ID_list.dropna(subset=['age_scan'])[['Subject', 'Session', 'mri_date', 'age_scan']]
+
+unmatched_age = pd.merge(dkt_pairs.astype({'Subject': str}).assign(Subject=lambda d: d['Subject'].str.zfill(8)), age_info[['Subject', 'Session']],
+                         on=['Subject', 'Session'], how='left', indicator=True).query('_merge == "left_only"')
+print("Age at scan (ID_list dates, birth date from the scan-date table)")
+print(f"BIDS sessions in ID_list: {len(ID_list)}; with an age: {len(age_info)}")
+print(f"DKT (Subject, Session) pairs without an age: {len(unmatched_age)}\n")
 
 age_info_path = os.path.join(scratch_path, "processed_data/MRI_age_info.csv")
 age_info.to_csv(age_info_path, index=False)
