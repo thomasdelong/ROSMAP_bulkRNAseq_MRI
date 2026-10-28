@@ -208,7 +208,7 @@ for (tissue in names(tissue_list)){
   tech_covar_list <- tech_covar_list[!tech_covar_list %in% c("ethnicity", "specimenID", "id","individualID","tissue","organ", "sex", "race", "ageDeath", "diagnosis", "apoeGenotype", "synapseID", "Age_norm",
   "Started.job.on","Started.mapping.on","Finished.on", "thal", "Braak", "CREAD", "CDR", "plaqueMean", "cogdx", "dcfdx_lv", "ceradsc", "braaksc", "msex", "educ", "spanish","apoe_genotype","age_at_visit_max",
   "age_first_ad_dx","age_death","cts_mmse30_first_ad_dx","cts_mmse30_lv", "exclude","excludeReason","isPostMortem","X","BrodmannArea","libraryPreparationMethod","readStrandOrigin", "platform")] 
-  print(tech_covar_list) 
+  #print(tech_covar_list) 
 
   convert_percent_to_numeric <- function(x) {
     as.numeric(gsub("%", "", x)) / 100
@@ -258,12 +258,14 @@ for (tissue in names(tissue_list)){
   dds <- DESeqDataSetFromMatrix(countData=rna_filtered_ordered, colData=metadata_filtered, design=~1)
   rld <- vst(dds, blind=FALSE)
 
-  na_per_column <- colSums(is.na(tech_covariates))
-  print(na_per_column)
-  na_per_row <- rowSums(is.na(tech_covariates))
-  print(na_per_row)
+  # na_per_column <- colSums(is.na(tech_covariates))
+  # print(na_per_column)
+  # na_per_row <- rowSums(is.na(tech_covariates))
+  # print(na_per_row)
 
-  model_covariates <- c('AlignmentSummaryMetrics__PCT_PF_READS_ALIGNED', 'RnaSeqMetrics__PCT_INTERGENIC_BASES', 'AlignmentSummaryMetrics__PF_READS_ALIGNED', 'Number.of.input.reads', 'RnaSeqMetrics__PF_ALIGNED_BASES', 'AlignmentSummaryMetrics__PF_HQ_ALIGNED_BASES', 'libraryPrep', 'RnaSeqMetrics__MEDIAN_5PRIME_BIAS', 'Mapping.speed..Million.of.reads.per.hour', 'RnaSeqMetrics__PCT_UTR_BASES', 'RIN', 'AlignmentSummaryMetrics__READS_ALIGNED_IN_PAIRS', 'AlignmentSummaryMetrics__PF_HQ_ERROR_RATE', 'RnaSeqMetrics__INTRONIC_BASES', 'Average.mapped.length', 'X..of.reads.unmapped..too.short', 'AlignmentSummaryMetrics__PCT_ADAPTER', 'AlignmentSummaryMetrics__PF_MISMATCH_RATE', 'AlignmentSummaryMetrics__PCT_READS_ALIGNED_IN_PAIRS', 'RnaSeqMetrics__CORRECT_STRAND_READS', 'RnaSeqMetrics__PCT_INTRONIC_BASES')
+  #model_covariates <- c('AlignmentSummaryMetrics__PCT_PF_READS_ALIGNED', 'RnaSeqMetrics__PCT_INTERGENIC_BASES', 'AlignmentSummaryMetrics__PF_READS_ALIGNED', 'Number.of.input.reads', 'RnaSeqMetrics__PF_ALIGNED_BASES', 'AlignmentSummaryMetrics__PF_HQ_ALIGNED_BASES', 'libraryPrep', 'RnaSeqMetrics__MEDIAN_5PRIME_BIAS', 'Mapping.speed..Million.of.reads.per.hour', 'RnaSeqMetrics__PCT_UTR_BASES', 'RIN', 'AlignmentSummaryMetrics__READS_ALIGNED_IN_PAIRS', 'AlignmentSummaryMetrics__PF_HQ_ERROR_RATE', 'RnaSeqMetrics__INTRONIC_BASES', 'Average.mapped.length', 'X..of.reads.unmapped..too.short', 'AlignmentSummaryMetrics__PCT_ADAPTER', 'AlignmentSummaryMetrics__PF_MISMATCH_RATE', 'AlignmentSummaryMetrics__PCT_READS_ALIGNED_IN_PAIRS', 'RnaSeqMetrics__CORRECT_STRAND_READS', 'RnaSeqMetrics__PCT_INTRONIC_BASES')
+  model_covariates <- c('RIN')
+
   tech_covariates_clean <- tech_covariates[, !colnames(tech_covariates) %in% colnames(tech_covariates)[colSums(is.na(tech_covariates)) > 10]] %>%
     filter(sequencingBatch != '0, 6, 7') 
   if (tissue_abbreviation == 'pcc'){
@@ -274,9 +276,9 @@ for (tissue in names(tissue_list)){
   columns_to_keep <- colnames(assay(rld)) %in% rownames(tech_covariates_clean)
   cleaned_corrected_counts <- t(assay(rld)[, columns_to_keep])
   print("cleaned metadata dimensions:")
-  dim(tech_covariates_clean)
+  print(dim(tech_covariates_clean))
   print("cleaned rna dimensions:")
-  dim(cleaned_corrected_counts)
+  print(dim(cleaned_corrected_counts))
 
   #filtering low expression genes
   low_exp_genes <- read.csv(paste0(scratch_path, "/processed_data/genes_pass_in_all_tissues.csv"))
@@ -288,10 +290,11 @@ for (tissue in names(tissue_list)){
   stopifnot(!anyNA(design_data))
   design_matrix <- model.matrix(~ msex + factor(cogdx), data = design_data)
 
-  tech_covariates_clean_filtered <- tech_covariates_clean[, model_covariates]
-  tech_covariates_clean_filtered$libraryPrep <- as.integer(factor(tech_covariates_clean_filtered$libraryPrep))
+  tech_covariates_clean_filtered <- tech_covariates_clean[, model_covariates, drop = FALSE]
+  #tech_covariates_clean_filtered$libraryPrep <- factor(tech_covariates_clean_filtered$libraryPrep)
   covars_numeric <- as.data.frame(lapply(tech_covariates_clean_filtered, function(x) as.numeric(as.character(x))))
 
+print(table(tech_covariates_clean$sequencingBatch, tech_covariates_clean$libraryPrep))
   result <- limma::removeBatchEffect(t(cleaned_filtered_corrected_counts), batch=as.vector(tech_covariates_clean$sequencingBatch), batch2 = NULL, covariates=covars_numeric, design = design_matrix) 
 
   write.csv(result, paste0(scratch_path, "/processed_data/", tissue_abbreviation, "_RNAseq_counts_filtered_corrected.csv"))
