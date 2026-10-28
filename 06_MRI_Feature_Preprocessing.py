@@ -291,6 +291,28 @@ ID_list['mri_date'] = pd.to_datetime(ID_list['scandate_visit_projID'].str.split(
 ID_list['age_scan'] = (ID_list['mri_date'] - ID_list['Subject'].map(birth_date)).dt.days / 365.25
 age_info = ID_list.dropna(subset=['age_scan'])[['Subject', 'Session', 'mri_date', 'age_scan']]
 
+# A few sessions have FreeSurfer output but no row in ID_list. Date such a session from the scan-date table only when the
+# gap is unambiguous: exactly one of the person's dated scans is not already claimed by an ID_list session and falls
+# between the dates of the neighbouring ID_list sessions. Ambiguous or empty gaps stay undated.
+fs_sessions = dkt_pairs.astype({'Subject': str}).assign(Subject=lambda d: d['Subject'].str.zfill(8))
+missing = fs_sessions.merge(ID_list[['Subject', 'Session']], on=['Subject', 'Session'], how='left', indicator=True).query('_merge == "left_only"')
+filled = []
+for subject, session in missing[['Subject', 'Session']].itertuples(index=False):
+    known = ID_list[ID_list['Subject'] == subject]
+    earlier = known.loc[known['Session'] < session, 'mri_date'].max()
+    later = known.loc[known['Session'] > session, 'mri_date'].min()
+    candidates = mri_info_df[(mri_info_df['Subject'] == subject) & (~mri_info_df['mri_date'].isin(known['mri_date']))]
+    if pd.notna(earlier):
+        candidates = candidates[candidates['mri_date'] > earlier]
+    if pd.notna(later):
+        candidates = candidates[candidates['mri_date'] < later]
+    if len(candidates) == 1:
+        filled.append({'Subject': subject, 'Session': session, 'mri_date': candidates['mri_date'].iloc[0]})
+filled = pd.DataFrame(filled, columns=['Subject', 'Session', 'mri_date'])
+filled['age_scan'] = (filled['mri_date'] - filled['Subject'].map(birth_date)).dt.days / 365.25
+print(f"FreeSurfer sessions missing from ID_list: {len(missing)}; dated from an unambiguous gap in the scan-date table: {len(filled)}")
+age_info = pd.concat([age_info, filled], ignore_index=True)
+
 unmatched_age = pd.merge(dkt_pairs.astype({'Subject': str}).assign(Subject=lambda d: d['Subject'].str.zfill(8)), age_info[['Subject', 'Session']],
                          on=['Subject', 'Session'], how='left', indicator=True).query('_merge == "left_only"')
 print("Age at scan (ID_list dates, birth date from the scan-date table)")
