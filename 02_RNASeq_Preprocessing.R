@@ -298,4 +298,10 @@ print(table(tech_covariates_clean$sequencingBatch, tech_covariates_clean$library
   result <- limma::removeBatchEffect(t(cleaned_filtered_corrected_counts), batch=as.vector(tech_covariates_clean$sequencingBatch), batch2 = NULL, covariates=covars_numeric, design = design_matrix) 
 
   write.csv(result, paste0(scratch_path, "/processed_data/", tissue_abbreviation, "_RNAseq_counts_filtered_corrected.csv"))
+
+  # Raw counts for the same specimens and genes, for the models in 07d and 08: there, sequencing batch and library prep go in the model
+  # and voom weights each observation, instead of the batch effect being removed from a VST matrix beforehand. The corrected matrix
+  # above is still written for the PCA plots in 03.
+  raw_kept <- as.matrix(rna_filtered_ordered[colnames(cleaned_filtered_corrected_counts), rownames(cleaned_filtered_corrected_counts)])
+  write.csv(raw_kept, paste0(scratch_path, "/processed_data/", tissue_abbreviation, "_RNAseq_counts_filtered.csv"))
 }

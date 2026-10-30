@@ -1,6 +1,7 @@
 library(limma)
 library(tidyverse)
 library(variancePartition)
+library(edgeR)
 library(yaml)
 
 args <- commandArgs(trailingOnly = TRUE)
@@ -24,13 +25,28 @@ data <- combined_data[, -1] %>% # the [,-1] is just indices, it won't filter wit
   left_join(dkt[, c('projid', region_feature)], by = 'projid') %>%
   column_to_rownames('specimenID')
 
-rna_ordered <- rnaseq_subset_filtered[, rownames(data)] 
+counts <- read.csv(paste0(scratch_path, "/processed_data/07_rnaseq_counts_subset.csv"), row.names = 1, check.names = FALSE)
+data <- data[!is.na(data[[region_feature]]), ]
+data$x <- data[[region_feature]]
+data$sequencingBatch <- factor(data$sequencingBatch); data$libraryPrep <- factor(data$libraryPrep)
 
-formula <- as.formula(paste0("~ `", region_feature, "` + age_diff + age_death + master_brain_side + msex"))
-fit <- dream(rna_ordered, formula, data)
-fit <- eBayes(fit)
+# Covariates, plus sequencing batch and library prep when they vary in this tissue. A level that is fully nested in another
+# (library prep within sequencing batch in some tissues) is aliased; the QR step drops it, which is the same as using batch alone.
+covs <- c("age_diff", "age_death", "master_brain_side", "msex",
+          if (nlevels(droplevels(data$sequencingBatch)) > 1) "sequencingBatch", if (nlevels(droplevels(data$libraryPrep)) > 1) "libraryPrep")
+full_rank <- function(X, keep = NULL) { q <- qr(X); X[, sort(union(q$pivot[seq_len(q$rank)], match(keep, colnames(X)))), drop = FALSE] }
 
-tt <- topTable(fit, coef = paste0(region_feature), number = Inf)
+# voom precision weights with one quality weight per specimen, estimated from the design WITHOUT the MRI term. The weights
+# therefore cannot adapt to the MRI feature, they are the same for every feature of this tissue, and the same weights
+# can be reused for permutations of the MRI table. RIN is not in the model: it tracks the neuronal content of the sample
+# (the signal itself), so adjusting for it removes part of what the MRI association measures.
+X0 <- full_rank(model.matrix(as.formula(paste("~", paste(covs, collapse = " + "))), data))
+dge <- calcNormFactors(DGEList(as.matrix(counts[, rownames(data)])))
+v <- voomWithQualityWeights(dge, X0)
+
+X <- full_rank(model.matrix(as.formula(paste("~ x +", paste(covs, collapse = " + "))), data), keep = "x")
+fit <- eBayes(lmFit(v, X))
+tt <- topTable(fit, coef = "x", number = Inf)
 out_dir <- paste0(scratch_path, "/processed_data/toptables/dkt/", rna_tissue, "/")
 dir.create(out_dir, recursive = TRUE, showWarnings = FALSE)
 write.csv(tt, paste0(out_dir, region_feature, ".csv"))
