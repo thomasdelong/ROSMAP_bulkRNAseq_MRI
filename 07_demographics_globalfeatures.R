@@ -77,6 +77,16 @@ combined_data <- merge(merged_age, wholebrain, by = "projid") %>%
 # Reorder the RNAseq columns to match the order in combined_data for dream
 rnaseq_subset_filtered <- rnaseq_df[, combined_data$specimenID]
 
+# Raw counts of the same specimens (02 writes them beside the corrected matrix) and the technical terms 07d and 08 put in the model
+read_counts <- function(t) read.csv(paste0(scratch_path, "/processed_data/", t, "_RNAseq_counts_filtered.csv"), row.names = 1, check.names = FALSE)
+counts_all <- Reduce(function(a, b) merge(a, b, by = 0) %>% column_to_rownames('Row.names'), lapply(c("dlpfc", "tc", "fc", "pcc", "hcn"), read_counts))
+counts_subset <- counts_all[, combined_data$specimenID]
+tech <- bind_rows(lapply(c("dlpfc", "tc", "fc", "pcc", "hcn"), function(t)
+  read.csv(paste0(scratch_path, "/processed_data/", t, "_RNAseq_metadata.csv"), check.names = FALSE, row.names = 1) %>%
+    rownames_to_column("specimenID") %>% transmute(specimenID, sequencingBatch = as.character(sequencingBatch), libraryPrep = as.character(libraryPrep))))
+combined_data <- combined_data %>% left_join(tech, by = "specimenID")
+stopifnot(!anyNA(combined_data$sequencingBatch), identical(colnames(counts_subset), combined_data$specimenID))
+
 # Get all features from the radiomics data
 features <- colnames(wholebrain)
 
@@ -133,4 +143,5 @@ ggsave(file=paste0(scratch_path,"/figures/main/07_diagnosis.svg"), plot=p, width
 rownames(combined_data) <- NULL
 write.csv(combined_data, paste0(scratch_path, '/processed_data/07_combined_wholebrain_metadata.csv'))
 write.csv(rnaseq_subset_filtered, paste0(scratch_path, '/processed_data/07_rnaseq_subset.csv'))
+write.csv(counts_subset, paste0(scratch_path, '/processed_data/07_rnaseq_counts_subset.csv'))
 
