@@ -41,18 +41,31 @@ rnaseq_subset_filtered <- read.csv(paste0(scratch_path, '/processed_data/07_rnas
 
 counts_subset <- read.csv(paste0(scratch_path, '/processed_data/07_rnaseq_counts_subset.csv'), check.names = FALSE, row.names = 1)
 
-# Cortex-wide fits with donor as a random effect. Sequencing batch and library prep go in the model as fixed effects and voom
-# weights every observation (voomWithDreamWeights, from the design WITHOUT the term being tested), instead of removing the batch
-# effect from a VST matrix first. Batch is largely nested in tissue and library prep in batch, so the fixed-effect matrix is
-# reduced to full rank before dream sees it (dream stops on aliased fixed effects).
-full_rank <- function(X, keep = NULL) { q <- qr(X); X[, sort(union(q$pivot[seq_len(q$rank)], match(keep, colnames(X)))), drop = FALSE] }
+# Cortex-wide fits with donor as a random effect. Sequencing batch goes in the model as a fixed effect and voom weights every
+# observation (voomWithDreamWeights, from the design WITHOUT the term being tested), instead of removing the batch effect from
+# a VST matrix first. Library prep is left out because every sequencing batch used a single prep (checked in fit_cortex), so
+# batch already carries it.
+#
+# Batch and tissue still overlap: batches 15 and 16 hold only frontal and temporal cortex samples, and those two tissues were
+# sequenced only in batches 15 and 16. Knowing a sample is in batch 15 or 16 therefore already says it is frontal or temporal
+# cortex, so one column of the fixed-effect matrix repeats information in the others. dream stops on such a column.
+# drop_redundant() removes columns that are exact combinations of earlier ones (the tested term is placed first, so it is
+# never the one removed) and prints what it removed.
+drop_redundant <- function(X, keep) {
+  X <- X[, c("(Intercept)", keep, setdiff(colnames(X), c("(Intercept)", keep))), drop = FALSE]
+  q <- qr(X)
+  redundant <- colnames(X)[q$pivot[-seq_len(q$rank)]]
+  if (length(redundant) > 0) message("redundant fixed-effect columns dropped: ", paste(redundant, collapse = ", "))
+  X[, setdiff(colnames(X), c("(Intercept)", redundant)), drop = FALSE]
+}
 fit_cortex <- function(term) {
   data <- combined_data[, names(combined_data) != ""] %>% filter(tissue != 'Head of caudate nucleus') %>% column_to_rownames('specimenID')   # drop 07's unnamed index column
-  data$tissue <- factor(gsub(" ", "", data$tissue)); data$sequencingBatch <- factor(data$sequencingBatch); data$libraryPrep <- factor(data$libraryPrep)
+  data$tissue <- factor(gsub(" ", "", data$tissue)); data$sequencingBatch <- factor(data$sequencingBatch)
+  stopifnot("a sequencing batch used more than one library prep" = all(count(distinct(data, sequencingBatch, libraryPrep), sequencingBatch)$n == 1))
   if (term == "cogdx") data$cogdx <- factor(data$cogdx, levels = c(1, 2, 4))
   data <- data[!is.na(data[[term]]), ]
-  Xf <- model.matrix(as.formula(paste("~", term, "+ age_diff + age_death + master_brain_side + msex + tissue + sequencingBatch + libraryPrep")), data)
-  keep <- grep(paste0("^", term), colnames(Xf), value = TRUE); Xf <- full_rank(Xf, keep = keep)[, -1, drop = FALSE]
+  Xf <- model.matrix(as.formula(paste("~", term, "+ age_diff + age_death + master_brain_side + msex + tissue + sequencingBatch")), data)
+  keep <- grep(paste0("^", term), colnames(Xf), value = TRUE); Xf <- drop_redundant(Xf, keep)
   colnames(Xf) <- make.names(colnames(Xf)); fixed <- cbind(data[, "projid", drop = FALSE], Xf)
   tested <- make.names(keep); null_terms <- setdiff(colnames(Xf), tested)
   dge <- calcNormFactors(DGEList(as.matrix(counts_subset[, rownames(fixed)])))

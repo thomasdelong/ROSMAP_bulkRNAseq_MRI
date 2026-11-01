@@ -30,22 +30,23 @@ data <- data[!is.na(data[[region_feature]]), ]
 data$x <- data[[region_feature]]
 data$sequencingBatch <- factor(data$sequencingBatch); data$libraryPrep <- factor(data$libraryPrep)
 
-# Covariates, plus sequencing batch and library prep when they vary in this tissue. A level that is fully nested in another
-# (library prep within sequencing batch in some tissues) is aliased; the QR step drops it, which is the same as using batch alone.
-covs <- c("age_diff", "age_death", "master_brain_side", "msex",
-          if (nlevels(droplevels(data$sequencingBatch)) > 1) "sequencingBatch", if (nlevels(droplevels(data$libraryPrep)) > 1) "libraryPrep")
-full_rank <- function(X, keep = NULL) { q <- qr(X); X[, sort(union(q$pivot[seq_len(q$rank)], match(keep, colnames(X)))), drop = FALSE] }
+# Sequencing batch goes in the model when this tissue has more than one. Library prep does not: every sequencing batch
+# used a single library prep, so once batch is in the model, prep adds nothing (its effect is already part of the batch
+# effect). The check below stops the script if that ever stops being true.
+batches_with_two_preps <- data %>% distinct(sequencingBatch, libraryPrep) %>% count(sequencingBatch) %>% filter(n > 1)
+stopifnot("a sequencing batch used more than one library prep; add libraryPrep to covs" = nrow(batches_with_two_preps) == 0)
+covs <- c("age_diff", "age_death", "master_brain_side", "msex")
+if (n_distinct(data$sequencingBatch) > 1) covs <- c(covs, "sequencingBatch")
 
 # voom precision weights with one quality weight per specimen, estimated from the design WITHOUT the MRI term. The weights
 # therefore cannot adapt to the MRI feature, they are the same for every feature of this tissue, and the same weights
 # can be reused for permutations of the MRI table. RIN is not in the model: it tracks the neuronal content of the sample
 # (the signal itself), so adjusting for it removes part of what the MRI association measures.
-X0 <- full_rank(model.matrix(as.formula(paste("~", paste(covs, collapse = " + "))), data))
+null_design <- model.matrix(reformulate(covs), data)          # covariates only
+full_design <- model.matrix(reformulate(c("x", covs)), data)  # covariates plus the MRI feature
 dge <- calcNormFactors(DGEList(as.matrix(counts[, rownames(data)])))
-v <- voomWithQualityWeights(dge, X0)
-
-X <- full_rank(model.matrix(as.formula(paste("~ x +", paste(covs, collapse = " + "))), data), keep = "x")
-fit <- eBayes(lmFit(v, X))
+v <- voomWithQualityWeights(dge, null_design)
+fit <- eBayes(lmFit(v, full_design))
 tt <- topTable(fit, coef = "x", number = Inf)
 out_dir <- paste0(scratch_path, "/processed_data/toptables/dkt/", rna_tissue, "/")
 dir.create(out_dir, recursive = TRUE, showWarnings = FALSE)
