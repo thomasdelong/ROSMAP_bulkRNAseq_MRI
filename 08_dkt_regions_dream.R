@@ -7,6 +7,7 @@ library(yaml)
 args <- commandArgs(trailingOnly = TRUE)
 rna_tissue <- args[1]
 region_feature <- args[2]
+n_perm <- if (length(args) >= 3) as.integer(args[3]) else 0
 
 env <- read_yaml(here::here("01_environment.yml"))
 scratch_path <- env$paths$scratch
@@ -51,3 +52,20 @@ tt <- topTable(fit, coef = "x", number = Inf)
 out_dir <- paste0(scratch_path, "/processed_data/toptables/dkt/", rna_tissue, "/")
 dir.create(out_dir, recursive = TRUE, showWarnings = FALSE)
 write.csv(tt, paste0(out_dir, region_feature, ".csv"))
+if (n_perm > 0) {
+  # Shuffle MRI rows across donors. Built from the same sorted donor list and seed in every job,
+  # so permutation b is identical for every tissue and every MRI feature (shared nulls).
+  donors <- sort(unique(combined_data$projid))
+  set.seed(6543)
+  perms <- replicate(n_perm, sample(donors))   # perms[i, b]: donor whose MRI row donor i receives
+  rows <- match(data$projid, donors)
+  null_pi1 <- vapply(seq_len(n_perm), function(b) {
+    xp <- dkt[[region_feature]][match(perms[rows, b], dkt$projid)]
+    ok <- !is.na(xp)
+    d <- full_design[ok, , drop = FALSE]; d[, "x"] <- xp[ok]
+    1 - propTrueNull(eBayes(lmFit(v[, ok], d))$p.value[, "x"]) 
+  }, numeric(1))
+  dir.create(paste0(out_dir, "perm"), showWarnings = FALSE)
+  write.csv(data.frame(perm = seq_len(n_perm), pi1 = null_pi1),
+            paste0(out_dir, "perm/", region_feature, ".csv"), row.names = FALSE)
+}

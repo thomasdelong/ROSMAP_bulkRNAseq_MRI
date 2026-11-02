@@ -57,7 +57,7 @@ REGION=$(echo "$LINE" | cut -f2)
 
 source /scratch/tdelong/miniforge3/etc/profile.d/conda.sh
 
-Rscript 08_dkt_regions_dream.R "$TISSUE" "$REGION"'''
+Rscript 08_dkt_regions_dream.R "$TISSUE" "$REGION" 500'''
 
     with open(os.path.join(script_dir, f'submit_chunk_{i+1}.sh'), "w") as file:
         file.write(slurm_script)
