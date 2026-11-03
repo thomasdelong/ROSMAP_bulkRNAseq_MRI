@@ -39,47 +39,65 @@ plot_pi1 <- function(region_abbrev, mri_feature) {
     tt <- read.csv(f)
     p <- tt$P.Value[!is.na(tt$P.Value)]
     pi0 <- propTrueNull(p)
-    tibble(dkt_region = dkt_region, pi0 = pi0, pi1 = 1 - pi0)
+    null_pi1 <- read.csv(paste0(dir_path, "perm/", basename(f)))$pi1   
+    tibble(dkt_region = dkt_region, pi0 = pi0, pi1 = 1 - pi0,
+          #permutation p-value against shuffled 
+          p_perm = (1 + sum(null_pi1 >= pi1)) / (1 + length(null_pi1)),
+          sig = pi1 > quantile(null_pi1, 0.95)) 
+
   })
  
   feature_truenull$label <- paste0("lh_", feature_truenull$dkt_region)
- 
+
   assign("highest", filter(feature_truenull, pi1 == max(pi1, na.rm = TRUE)), envir = parent.frame())
 
-  #original ggsegDKT code from before it got merged into ggsegFreeSurfer
-  # plot_data <- brain_join(feature_truenull, dkt, "label") %>%
-  #   filter(hemi == "left") %>%
-  #   drop_na(region)
-  # #print(head(plot_data))
-  # print(dim(plot_data))
-  # p <- ggplot(plot_data) +
-  #   geom_brain(aes(fill = pi1), atlas = dkt, hemi = "left", view = "lateral") +
-  #   scale_fill_gradient2(low = "white", high = "purple",
-  #   limits = c(0, 0.415), name = "\u03c01") +
-  #   theme_void() +
-  #   theme(legend.position = "none", plot.margin = unit(c(0, 10, 0, 0), units = "points"))
-  p <- ggplot() +
-  geom_brain(data = feature_truenull,
+sig_outline <- as.data.frame(dkt()) %>%
+  filter(hemi == "left", view %in% c("lateral", "medial")) %>%
+  reposition_brain(hemi ~ view) %>%
+  filter(label %in% feature_truenull$label[feature_truenull$sig]) %>%
+  sf::st_as_sf()
+
+p <- ggplot() +
+  geom_brain(data = feature_truenull, 
              mapping = aes(fill = .data$pi1),
              hemi = "left",
              view = c("lateral", "medial"),
              atlas = dkt(),
              position = position_brain(hemi ~ view),
-             color = "black", linewidth = 0.1) +
-  scale_fill_gradient2(low = "white", high = "#8b00ad",
-                        limits = c(0, 0.425), name = "\u03c01", #catch 22 with the scale here. need to rewrite so the pi1 calculations happen in a different loop. or just run it once then set it manually if anything is out of scale
-                        na.value = "grey") +
+             color = "black",
+             linewidth = 0.1,
+             context = FALSE,
+             inherit.aes = FALSE) +
+  #different outline of significant regions
+  #geom_sf(data = sig_outline, fill = NA, colour = "#dd0000", linewidth = 0.4, inherit.aes = FALSE) +
+  scale_fill_gradient2(low = "white", high = "#c30000",
+                       limits = c(0, 0.43), name = "\u03c01",
+                       na.value = adjustcolor("white", alpha.f = 0)) +
   theme_void() +
   theme(legend.position = "none", plot.margin = unit(c(0, 10, 0, 0), units = "points"))
+   # add dots based on shuffle
+  if (any(feature_truenull$sig)) { 
+    stars <- as.data.frame(dkt()) %>%
+      filter(hemi == "left", view %in% c("lateral", "medial")) %>%
+      reposition_brain(hemi ~ view) %>%
+      filter(label %in% feature_truenull$label[feature_truenull$sig]) %>%
+      sf::st_as_sf() %>% sf::st_cast("POLYGON", warn = FALSE) %>% 
+      mutate(area = as.numeric(sf::st_area(geometry))) %>%
+      slice_max(area, n = 1, by = c(label, view)) %>%  
+      mutate(centre = sf::st_centroid(sf::st_inscribed_circle(geometry)[seq_len(n())]))
+    xy <- sf::st_coordinates(stars$centre)
+    p <- p + annotate("point", x = xy[, 1], y = xy[, 2], size = 0.6, vjust = 0, fontface = "bold")+
+    annotate("point", x = xy[, 1], y = xy[, 2], size = 0.1, vjust = 0, color = 'white', fontface = "bold")
+  }
   assign(paste0(region_abbrev, "_", mri_feature, "_plot"), p, envir = parent.frame())
  
   write.csv(feature_truenull, paste0(pi1maps_dir, region_abbrev, "_", mri_feature, ".csv"), row.names = FALSE)
 }
-colorbar <- ggplot(data.frame(pi1 = seq(0, 0.425, length.out = 200)),
+colorbar <- ggplot(data.frame(pi1 = seq(0, 0.43, length.out = 200)),
                    aes(x = 1, y = pi1, fill = pi1)) +
   geom_raster() +
-  scale_fill_gradient2(low = "white", high = "#8b00ad",
-                        limits = c(0, 0.425), name = "\u03c01") +
+  scale_fill_gradient2(low = "white", high = "#c30000",
+                        limits = c(0, 0.43), name = "\u03c01") +
   scale_x_continuous(expand = c(0, 0)) +
   scale_y_continuous(position = "right", expand = c(0, 0),
                      breaks = c(0,0.1,0.2,0.3,0.4)) +

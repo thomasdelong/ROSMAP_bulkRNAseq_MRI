@@ -61,7 +61,7 @@ paste0('sample ids: ', length(unique(projid_mapping_subset$specimenID)))
 paste0('sample ids in RNA data: ', length(unique(colnames(rnaseq_df))))
 
 # Calculate the age difference
-merged_age <- merge(rosmaster_df[, c("projid", "age_death", "msex", "cogdx", "gpath", "cogn_global_random_slope", "educ")],
+merged_age <- merge(rosmaster_df[, c("projid", "age_death", "msex", "cogdx", "gpath", "cogn_global_random_slope", "cogn_globaln_lv", "educ")],
                     age_at_features[, c("projid", "age_scan")], by = "projid") %>%
               merge(side[,c('projid', 'master_brain_side')], by = 'projid')
 merged_age$age_diff <- merged_age$age_death - merged_age$age_scan

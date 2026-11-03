@@ -10,10 +10,8 @@ n_cores <- as.integer(Sys.getenv("SLURM_CPUS_PER_TASK", unset = detectCores()))
 message("Using ", n_cores, " cores")
 
 refs <- "tissue, parcel, feature
-dorsolateralprefrontalcortex, parahippocampal, CurvInd
-frontalcortex, lateraloccipital, ThickAvg
-temporalcortex, parsorbitalis, SurfArea_norm
-Headofcaudatenucleus, lateraloccipital, GrayVol_norm
+temporalcortex, middletemporal, GrayVol_norm
+posteriorcingulatecortex, middletemporal, GrayVol_norm
 "
 refs <- read.csv(text = refs, strip.white = TRUE)
 refs$fullname <- paste(refs$tissue, refs$parcel, refs$feature, sep = "_")

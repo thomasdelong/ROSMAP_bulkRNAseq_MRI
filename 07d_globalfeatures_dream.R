@@ -74,10 +74,32 @@ fit_cortex <- function(term) {
   list(fit = fit, coef = tested)
 }
 
-f <- fit_cortex("MeanThickness")
-write.csv(topTable(f$fit, coef = "MeanThickness", number = Inf), paste0(scratch_path, "/processed_data/toptables/MeanThickness_cortex.csv"))
-f <- fit_cortex("CortexVol_norm")
-write.csv(topTable(f$fit, coef = "CortexVol_norm", number = Inf), paste0(scratch_path, "/processed_data/toptables/CortexVol_norm_cortex.csv"))
-print("fitting cogdx")
-f <- fit_cortex("cogdx")
-write.csv(topTable(f$fit, coef = "cogdx4", number = Inf), paste0(scratch_path, "/processed_data/toptables/AD_cortex.csv"))
+# f <- fit_cortex("MeanThickness")
+# write.csv(topTable(f$fit, coef = "MeanThickness", number = Inf), paste0(scratch_path, "/processed_data/toptables/MeanThickness_cortex.csv"))
+# f <- fit_cortex("CortexVol_norm")
+# write.csv(topTable(f$fit, coef = "CortexVol_norm", number = Inf), paste0(scratch_path, "/processed_data/toptables/CortexVol_norm_cortex.csv"))
+# print("fitting cogdx")
+# # f <- fit_cortex("cogdx")
+# # write.csv(topTable(f$fit, coef = "cogdx4", number = Inf), paste0(scratch_path, "/processed_data/toptables/AD_cortex.csv"))
+# f <- fit_cortex("cogn_globaln_lv")
+# write.csv(topTable(f$fit, coef = "cogn_globaln_lv", number = Inf), paste0(scratch_path, "/processed_data/toptables/cogn_globaln_lv_cortex.csv"))
+
+
+fit_tc <- function(term) {
+  data <- combined_data[, names(combined_data) != ""] %>% filter(tissue == 'temporal cortex') %>% column_to_rownames('specimenID')   # drop 07's unnamed index column
+  data$tissue <- factor(gsub(" ", "", data$tissue)); data$sequencingBatch <- factor(data$sequencingBatch)
+  stopifnot("a sequencing batch used more than one library prep" = all(count(distinct(data, sequencingBatch, libraryPrep), sequencingBatch)$n == 1))
+  if (term == "cogdx") data$cogdx <- factor(data$cogdx, levels = c(1, 2, 4))
+  data <- data[!is.na(data[[term]]), ]
+  Xf <- model.matrix(as.formula(paste("~", term, "+ age_diff + age_death + master_brain_side + msex + sequencingBatch")), data)
+  keep <- grep(paste0("^", term), colnames(Xf), value = TRUE); Xf <- drop_redundant(Xf, keep)
+  colnames(Xf) <- make.names(colnames(Xf)); fixed <- cbind(data[, "projid", drop = FALSE], Xf)
+  tested <- make.names(keep); null_terms <- setdiff(colnames(Xf), tested)
+  dge <- calcNormFactors(DGEList(as.matrix(counts_subset[, rownames(fixed)])))
+  vobj <- voomWithDreamWeights(dge, as.formula(paste("~", paste(c(null_terms), collapse = " + "))), fixed)
+  fit <- eBayes(dream(vobj, as.formula(paste("~", paste(c(colnames(Xf)), collapse = " + "))), fixed))
+  list(fit = fit, coef = tested)
+}
+
+f <- fit_tc("cogn_globaln_lv")
+write.csv(topTable(f$fit, coef = "cogn_globaln_lv", number = Inf), paste0(scratch_path, "/processed_data/toptables/cogn_globaln_lv_tc.csv"))

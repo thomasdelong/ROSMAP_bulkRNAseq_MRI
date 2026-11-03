@@ -7,11 +7,9 @@ library(ggsegFreeSurfer)
 env <- read_yaml(here::here("01_environment.yml"))
 scratch_path <- env$paths$scratch
 
-refs <- "label, tissue, parcel, feature
-DLPFC - Parahippocampal Curvature, dorsolateralprefrontalcortex, parahippocampal, CurvInd
-FC - Lateral Occipital Thickness, frontalcortex, lateraloccipital, ThickAvg
-TC - Pars Orbitalis Surface Area, temporalcortex, parsorbitalis, SurfArea_norm
-HCN - Lateral Occipital Volume, Headofcaudatenucleus, lateraloccipital, GrayVol_norm
+refs <- "tissue, parcel, feature
+temporalcortex, middletemporal, GrayVol_norm
+posteriorcingulatecortex, middletemporal, GrayVol_norm
 "
 refs <- read.csv(text = refs, strip.white = TRUE) %>%
   mutate(fullname = paste(tissue, parcel, feature, sep = "_"))

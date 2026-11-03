@@ -13,7 +13,7 @@ fig_dir <- file.path(scratch_path, "figures", "main")
 dir.create(stats_dir, recursive = TRUE, showWarnings = FALSE)
 dir.create(fig_dir, recursive = TRUE, showWarnings = FALSE)
 
-covar <- "ceradsc"
+covar <- "cogn_globaln_lv"
 mri_features <- c("ThickAvg", "SurfArea_norm", "GrayVol_norm", "CurvInd")
 
 feature_names <- c(
@@ -75,8 +75,8 @@ for (mri_feature in mri_features) {
 }
 
 plot_cognition_map <- function(stats, mri_feature) {
-  lim <- max(abs(stats$beta), na.rm = TRUE)
-
+  lim_max <- max(stats$beta, na.rm = TRUE)
+  lim_min <- min(stats$beta, na.rm = TRUE)
   ggplot() +
     geom_brain(data = stats,
                mapping = aes(fill = .data$beta),
@@ -85,8 +85,8 @@ plot_cognition_map <- function(stats, mri_feature) {
                atlas = dkt(),
                position = position_brain(hemi ~ view),
                color = "black") +
-    scale_fill_gradient2(low = '#0f12d0', mid = "white", high = "#b22222", midpoint = 0,
-                         limits = c(-lim, lim),
+    scale_fill_gradient2(low = '#c80000', mid = "white", high = "#33538d", midpoint = 0,
+                         limits = c(lim_min, lim_max),
                          name = "Beta",
                          na.value = "grey80",
                          guide = guide_colorbar(direction = "horizontal", barwidth = 10)) +
@@ -99,5 +99,5 @@ plot_cognition_map <- function(stats, mri_feature) {
 for (mri_feature in mri_features) {
   p <- plot_cognition_map(region_stats[[mri_feature]], mri_feature)
   ggsave(file = file.path(fig_dir, paste0("07e_brainmap_", covar, "_", mri_feature, ".svg")),
-         plot = p, width = 10, height = 4, device = svg)
+         plot = p, width = 10, height = 4, device = svglite::svglite)
 }
